@@ -29,7 +29,8 @@ public class DT : MonoBehaviour
     [SerializeField] private GameObject robot3_2;
     [SerializeField] private GameObject robot3_3;
     [SerializeField] private GameObject robot3_4;
-
+    [SerializeField] private GameObject objectPrefab;
+ 
     float[] joint1 = new float[4];
     float[] joint2 = new float[4];
     float[] joint3 = new float[4];
@@ -172,6 +173,12 @@ public class DT : MonoBehaviour
                     cylinder4_OFF = true;
                     cylinder4_ON = false;
                 }
+                if (outPut[8] == true)
+                {
+                    Vector3 spawnPosition = new Vector3(0, 0, 0);
+                    Quaternion spawnRotation = Quaternion.identity;
+                    Instantiate(objectPrefab, spawnPosition, spawnRotation);
+                }
                 if (cylinder1_ON && cylinder1_OFF == false)
                 {
                     cylinder1.transform.localPosition = Vector3.MoveTowards(cylinder1.transform.localPosition, new Vector3(0.45f, 0, 0), moveSpeed * Time.deltaTime);
@@ -204,6 +211,7 @@ public class DT : MonoBehaviour
                 {
                     cylinder4.transform.localPosition = Vector3.MoveTowards(cylinder4.transform.localPosition, new Vector3(-0.3f, 0, 0), 2 * moveSpeed * Time.deltaTime);
                 }
+                
 
             }
             catch (Exception e)
@@ -219,7 +227,7 @@ public class DT : MonoBehaviour
         try
         {
             client = new TcpClient();
-            await client.ConnectAsync("127.0.0.1", 1502);
+            await client.ConnectAsync("127.0.0.1", 502);
 
             isConnected = client.Connected;
 
