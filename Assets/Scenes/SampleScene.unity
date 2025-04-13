@@ -4981,7 +4981,7 @@ GameObject:
   - component: {fileID: 2012113846}
   - component: {fileID: 2012113848}
   m_Layer: 0
-  m_Name: script
+  m_Name: Script
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

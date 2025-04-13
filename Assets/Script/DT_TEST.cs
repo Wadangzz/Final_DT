@@ -9,11 +9,9 @@ using System.Threading.Tasks;
 
 public class DT : MonoBehaviour
 {
-    private TcpClient robot;
+
     private TcpClient client;
     private IModbusMaster modbusMaster;
-    private TcpListener robotAxis;
-    private NetworkStream stream;
 
     [SerializeField] private GameObject cylinder1;
     [SerializeField] private GameObject cylinder2;
@@ -36,10 +34,19 @@ public class DT : MonoBehaviour
     float[] joint2 = new float[4];
     float[] joint3 = new float[4];
 
+    bool cylinder1_ON = false;
+    bool cylinder1_OFF = false;
+    bool cylinder2_ON = false;
+    bool cylinder2_OFF = false;
+    bool cylinder3_ON = false;
+    bool cylinder3_OFF = false;
+    bool cylinder4_ON = false;
+    bool cylinder4_OFF = false;
+
     bool isConnected = false;
     bool[] coils = new bool[1024];
     bool[] outPut = new bool[14];
-    ushort[] registers = new ushort[123];
+    ushort[] registers = new ushort[125];
 
     Vector3 velocity = Vector3.zero;
     public float moveSpeed = 3.0f;
@@ -107,6 +114,7 @@ public class DT : MonoBehaviour
     // 코일을 읽어오고 실린더, 컨베이어, 오브젝트에 적용
     IEnumerator ReadInputs()
     {
+
         while (true)
         {
             try
@@ -116,7 +124,6 @@ public class DT : MonoBehaviour
                     ushort startAddress = 0;
                     ushort numCoils = 1024;//코일 갯수
                     coils = modbusMaster.ReadInputs(1, startAddress, numCoils);
-                    Debug.Log($"{coils[340]}");
 
                     for (int i = 0 ; i < 14; i++)
                     {
@@ -126,35 +133,76 @@ public class DT : MonoBehaviour
                 }
                 if (outPut[0] == true)
                 {
-                    cylinder1.transform.localPosition = Vector3.SmoothDamp(cylinder1.transform.localPosition, new Vector3(0.5f, 0, 0), ref velocity, 0.05f);
+                    cylinder1_ON = true;
+                    cylinder1_OFF = false;
                 }
                 else if (outPut[1] == true)
                 {
-                    cylinder1.transform.localPosition = Vector3.SmoothDamp(cylinder1.transform.localPosition, new Vector3(-0.3f, 0, 0), ref velocity, 0.01f);
+                    cylinder1_OFF = true;
+                    cylinder1_ON = false;
+
                 }
                 if (outPut[2] == true)
                 {
-                    cylinder2.transform.localPosition = Vector3.SmoothDamp(cylinder2.transform.localPosition, new Vector3(0.5f, 0, 0), ref velocity, 0.05f);
+                    cylinder2_ON = true;
+                    cylinder2_OFF = false;
                 }
                 else if (outPut[3] == true)
                 {
-                    cylinder2.transform.localPosition = Vector3.SmoothDamp(cylinder2.transform.localPosition, new Vector3(-0.3f, 0, 0), ref velocity, 0.01f);
+                    cylinder2_OFF = true;
+                    cylinder2_ON = false;       
                 }
                 if (outPut[4] == true)
                 {
-                    cylinder3.transform.localPosition = Vector3.SmoothDamp(cylinder3.transform.localPosition, new Vector3(0.5f, 0, 0), ref velocity, 0.05f);
+                    cylinder3_ON = true;
+                    cylinder3_OFF = false;
                 }
                 else if (outPut[5] == true)
                 {
-                    cylinder3.transform.localPosition = Vector3.SmoothDamp(cylinder3.transform.localPosition, new Vector3(-0.3f, 0, 0), ref velocity, 0.01f);
+                    cylinder3_OFF = true;
+                    cylinder3_ON = false;
                 }
                 if (outPut[6] == true)
                 {
-                    cylinder4.transform.localPosition = Vector3.SmoothDamp(cylinder4.transform.localPosition, new Vector3(0.5f, 0, 0), ref velocity, 0.05f);
+                    cylinder4_ON = true;
+                    cylinder4_OFF = false;
                 }
                 else if (outPut[7] == true)
                 {
-                    cylinder4.transform.localPosition = Vector3.SmoothDamp(cylinder4.transform.localPosition, new Vector3(-0.3f, 0, 0), ref velocity, 0.01f);
+                    cylinder4_OFF = true;
+                    cylinder4_ON = false;
+                }
+                if (cylinder1_ON && cylinder1_OFF == false)
+                {
+                    cylinder1.transform.localPosition = Vector3.MoveTowards(cylinder1.transform.localPosition, new Vector3(0.45f, 0, 0), moveSpeed * Time.deltaTime);
+                }
+                else if (cylinder1_OFF && cylinder1_ON == false)
+                {
+                    cylinder1.transform.localPosition = Vector3.MoveTowards(cylinder1.transform.localPosition, new Vector3(-0.3f, 0, 0), 2 * moveSpeed * Time.deltaTime);
+                }
+                if (cylinder2_ON && cylinder2_OFF == false)
+                {
+                    cylinder2.transform.localPosition = Vector3.MoveTowards(cylinder2.transform.localPosition, new Vector3(0.45f, 0, 0), moveSpeed * Time.deltaTime);
+                }
+                else if (cylinder2_OFF && cylinder2_ON == false)
+                {
+                    cylinder2.transform.localPosition = Vector3.MoveTowards(cylinder2.transform.localPosition, new Vector3(-0.3f, 0, 0), 2 * moveSpeed * Time.deltaTime);
+                }
+                if (cylinder3_ON && cylinder3_OFF == false)
+                {
+                    cylinder3.transform.localPosition = Vector3.MoveTowards(cylinder3.transform.localPosition, new Vector3(0.45f, 0, 0), moveSpeed * Time.deltaTime);
+                }
+                else if (cylinder3_OFF && cylinder3_ON == false)
+                {
+                    cylinder3.transform.localPosition = Vector3.MoveTowards(cylinder3.transform.localPosition, new Vector3(-0.3f, 0, 0), 2 * moveSpeed * Time.deltaTime);
+                }
+                if (cylinder4_ON && cylinder4_OFF == false)
+                {
+                    cylinder4.transform.localPosition = Vector3.MoveTowards(cylinder4.transform.localPosition, new Vector3(0.45f, 0, 0), moveSpeed * Time.deltaTime);
+                }
+                else if (cylinder4_OFF && cylinder4_ON == false)
+                {
+                    cylinder4.transform.localPosition = Vector3.MoveTowards(cylinder4.transform.localPosition, new Vector3(-0.3f, 0, 0), 2 * moveSpeed * Time.deltaTime);
                 }
 
             }
@@ -171,7 +219,7 @@ public class DT : MonoBehaviour
         try
         {
             client = new TcpClient();
-            await client.ConnectAsync("10.10.24.179", 1502);
+            await client.ConnectAsync("127.0.0.1", 1502);
 
             isConnected = client.Connected;
 
