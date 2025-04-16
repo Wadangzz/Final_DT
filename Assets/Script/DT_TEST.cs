@@ -6,7 +6,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-
 public class DT : MonoBehaviour
 {
 
@@ -16,7 +15,11 @@ public class DT : MonoBehaviour
     [SerializeField] private GameObject cylinder1;
     [SerializeField] private GameObject cylinder2;
     [SerializeField] private GameObject cylinder3;
+
     [SerializeField] private GameObject cylinder4;
+    [SerializeField] private GameObject cylinder5;
+    [SerializeField] private GameObject cylinder6;
+
     [SerializeField] private GameObject robot1_1;
     [SerializeField] private GameObject robot1_2;
     [SerializeField] private GameObject robot1_3;
@@ -30,7 +33,8 @@ public class DT : MonoBehaviour
     [SerializeField] private GameObject robot3_3;
     [SerializeField] private GameObject robot3_4;
     [SerializeField] private GameObject objectPrefab;
- 
+    [SerializeField] private Transform conveyorTransform;
+
     float[] joint1 = new float[4];
     float[] joint2 = new float[4];
     float[] joint3 = new float[4];
@@ -44,14 +48,19 @@ public class DT : MonoBehaviour
     bool cylinder4_ON = false;
     bool cylinder4_OFF = false;
 
+
+    bool objectSpawned = false;
+
     bool isConnected = false;
     bool[] coils = new bool[1024];
     bool[] outPut = new bool[14];
     ushort[] registers = new ushort[125];
 
     Vector3 velocity = Vector3.zero;
-    public float moveSpeed = 3.0f;
+    private float moveSpeed = 3.0f;
+    private float conveyorSpeed = 50.0f;
 
+    private List<GameObject> batteryCase = new List<GameObject>();
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -83,6 +92,7 @@ public class DT : MonoBehaviour
                     ushort numRegisters = 125;//
                     registers = modbusMaster.ReadInputRegisters(1, startAddress, numRegisters);
                 }
+
                 for (int i = 0; i < 4; i++)
                 {
                     joint1[i] = RegistersToFloat(registers[i * 2 + 100], registers[i * 2 + 101]);
@@ -125,94 +135,116 @@ public class DT : MonoBehaviour
                     ushort startAddress = 0;
                     ushort numCoils = 1024;//코일 갯수
                     coils = modbusMaster.ReadInputs(1, startAddress, numCoils);
-
-                    for (int i = 0 ; i < 14; i++)
-                    {
-                       outPut[i] = coils[i+340];
-                    }
-                    Debug.Log($"Coils : {string.Join(", ",outPut)}");
+                    //Debug.Log($"Coils : {string.Join(", ",outPut)}");
                 }
-                if (outPut[0] == true)
+                if (coils[340] == true)
                 {
                     cylinder1_ON = true;
                     cylinder1_OFF = false;
                 }
-                else if (outPut[1] == true)
+                else if (coils[341] == true)
                 {
                     cylinder1_OFF = true;
                     cylinder1_ON = false;
-
                 }
-                if (outPut[2] == true)
+                if (coils[342] == true)
                 {
                     cylinder2_ON = true;
                     cylinder2_OFF = false;
                 }
-                else if (outPut[3] == true)
+                else if (coils[343] == true)
                 {
                     cylinder2_OFF = true;
                     cylinder2_ON = false;       
                 }
-                if (outPut[4] == true)
+                if (coils[344] == true)
                 {
                     cylinder3_ON = true;
                     cylinder3_OFF = false;
                 }
-                else if (outPut[5] == true)
+                else if (coils[345] == true)
                 {
                     cylinder3_OFF = true;
                     cylinder3_ON = false;
                 }
-                if (outPut[6] == true)
+                if (coils[346] == true)
                 {
                     cylinder4_ON = true;
                     cylinder4_OFF = false;
                 }
-                else if (outPut[7] == true)
+                else if (coils[347] == true)
                 {
                     cylinder4_OFF = true;
                     cylinder4_ON = false;
                 }
-                if (outPut[8] == true)
+                //if (coils[348] == true)
+                //{
+                //    cylinder5.transform.localPosition = Vector3.MoveTowards(cylinder5.transform.localPosition, new Vector3(0.25f, 0, 0), moveSpeed * Time.deltaTime);
+                    
+                //} 
+                //else if (coils[348] == false)
+                //{
+                //    cylinder5.transform.localPosition = Vector3.MoveTowards(cylinder5.transform.localPosition, new Vector3(-0.3f, 0, 0), 2 * moveSpeed * Time.deltaTime);
+                //}
+                if (coils[350] == true)
                 {
-                    Vector3 spawnPosition = new Vector3(0, 0, 0);
-                    Quaternion spawnRotation = Quaternion.identity;
-                    Instantiate(objectPrefab, spawnPosition, spawnRotation);
+                    foreach (GameObject obj in batteryCase)
+                    {
+                        obj.transform.localPosition += Vector3.right * conveyorSpeed * Time.deltaTime;
+                    }
                 }
-                if (cylinder1_ON && cylinder1_OFF == false)
+                //else if (coils[350] == false)
+                //{
+                //    cylinder5_ON = false;
+                //}
+
+                if (coils[560])
+                {
+                    objectSpawned = false; // 오브젝트 재생성 가능
+                    cylinder1_OFF = false; // 초기화해서 재생성 방지
+                }
+
+                if (cylinder1_ON && !cylinder1_OFF)
                 {
                     cylinder1.transform.localPosition = Vector3.MoveTowards(cylinder1.transform.localPosition, new Vector3(0.45f, 0, 0), moveSpeed * Time.deltaTime);
+                    if (cylinder1.transform.localPosition.x >= 0.4f && !objectSpawned)
+                    {
+                        Vector3 spawnPosition = new Vector3(-808, 130, 318);
+                        Quaternion spawnRotation = Quaternion.identity;
+                        GameObject newObj = Instantiate(objectPrefab, spawnPosition, spawnRotation);
+                        newObj.transform.SetParent(conveyorTransform);
+                        batteryCase.Add(newObj);
+                        objectSpawned = true; // 오브젝트가 생성되었음을 표시
+                    }
                 }
-                else if (cylinder1_OFF && cylinder1_ON == false)
+                else if (cylinder1_OFF && !cylinder1_ON)
                 {
                     cylinder1.transform.localPosition = Vector3.MoveTowards(cylinder1.transform.localPosition, new Vector3(-0.3f, 0, 0), 2 * moveSpeed * Time.deltaTime);
                 }
-                if (cylinder2_ON && cylinder2_OFF == false)
+                if (cylinder2_ON && !cylinder2_OFF)
                 {
                     cylinder2.transform.localPosition = Vector3.MoveTowards(cylinder2.transform.localPosition, new Vector3(0.45f, 0, 0), moveSpeed * Time.deltaTime);
                 }
-                else if (cylinder2_OFF && cylinder2_ON == false)
+                else if (cylinder2_OFF && !cylinder2_ON)
                 {
                     cylinder2.transform.localPosition = Vector3.MoveTowards(cylinder2.transform.localPosition, new Vector3(-0.3f, 0, 0), 2 * moveSpeed * Time.deltaTime);
                 }
-                if (cylinder3_ON && cylinder3_OFF == false)
+                if (cylinder3_ON && !cylinder3_OFF)
                 {
                     cylinder3.transform.localPosition = Vector3.MoveTowards(cylinder3.transform.localPosition, new Vector3(0.45f, 0, 0), moveSpeed * Time.deltaTime);
                 }
-                else if (cylinder3_OFF && cylinder3_ON == false)
+                else if (cylinder3_OFF && !cylinder3_ON)
                 {
                     cylinder3.transform.localPosition = Vector3.MoveTowards(cylinder3.transform.localPosition, new Vector3(-0.3f, 0, 0), 2 * moveSpeed * Time.deltaTime);
                 }
-                if (cylinder4_ON && cylinder4_OFF == false)
+                if (cylinder4_ON && !cylinder4_OFF)
                 {
                     cylinder4.transform.localPosition = Vector3.MoveTowards(cylinder4.transform.localPosition, new Vector3(0.45f, 0, 0), moveSpeed * Time.deltaTime);
                 }
-                else if (cylinder4_OFF && cylinder4_ON == false)
+                else if (cylinder4_OFF && !cylinder4_ON)
                 {
                     cylinder4.transform.localPosition = Vector3.MoveTowards(cylinder4.transform.localPosition, new Vector3(-0.3f, 0, 0), 2 * moveSpeed * Time.deltaTime);
                 }
-                
-
             }
             catch (Exception e)
             {
@@ -227,7 +259,7 @@ public class DT : MonoBehaviour
         try
         {
             client = new TcpClient();
-            await client.ConnectAsync("127.0.0.1", 502);
+            await client.ConnectAsync("10.10.24.179", 1502);
 
             isConnected = client.Connected;
 
