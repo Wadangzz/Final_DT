@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Unity.VisualScripting;
 
 public class DT : MonoBehaviour
 {
@@ -32,6 +33,7 @@ public class DT : MonoBehaviour
     [SerializeField] private GameObject robot3_2;
     [SerializeField] private GameObject robot3_3;
     [SerializeField] private GameObject robot3_4;
+    [SerializeField] private GameObject servoTower;
     [SerializeField] private GameObject objectPrefab;
 
     [SerializeField] private Transform conveyorTransform;
@@ -49,8 +51,11 @@ public class DT : MonoBehaviour
     bool cylinder4_ON = false;
     bool cylinder4_OFF = false;
 
+    float servoPosition = new float();
 
-    bool objectSpawned = false;
+
+
+    //bool objectSpawned = false;
     bool isConnected = false;
     bool[] coils = new bool[1024];
     ushort[] registers = new ushort[125];
@@ -78,6 +83,13 @@ public class DT : MonoBehaviour
         BitConverter.GetBytes(high).CopyTo(bytes, 2);
         return BitConverter.ToSingle(bytes, 0);
     }
+    int RegistersToInt32(ushort low, ushort high)
+    {
+        uint raw = ((uint)high << 16) | low;
+        return unchecked((int)raw);
+    }
+
+
     // 레지스터를 읽어오고 float 변환 후 로봇에 적용
     IEnumerator ReadInputRegisters()
     {
@@ -90,6 +102,9 @@ public class DT : MonoBehaviour
                     ushort startAddress = 0;
                     ushort numRegisters = 125;//
                     registers = modbusMaster.ReadInputRegisters(1, startAddress, numRegisters);
+                    Debug.Log($" {registers[71]} , {registers[72]}");
+                    servoPosition = RegistersToInt32(registers[71], registers[72]) / 2;
+                    Debug.Log($"servoPosition : {servoPosition}");
                     for (int i = 0; i < 4; i++)
                     {
                         joint1[i] = RegistersToFloat(registers[i * 2 + 100], registers[i * 2 + 101]);
@@ -110,6 +125,8 @@ public class DT : MonoBehaviour
                     robot3_2.transform.localRotation = Quaternion.Euler(-joint3[1], 0, 0);
                     robot3_3.transform.localRotation = Quaternion.Euler(-joint3[2] + joint3[1], 0, 0);
                     robot3_4.transform.rotation = Quaternion.Euler(0, robot3_4.transform.rotation.eulerAngles.y, 0);
+
+                    servoTower.transform.localPosition = new Vector3(0, servoPosition / 10000f, 0);
                 }
             }
             catch (Exception e)
@@ -189,10 +206,6 @@ public class DT : MonoBehaviour
                             obj.transform.localPosition += Vector3.right * conveyorSpeed * Time.deltaTime;
                         }
                     }
-                    //else if (coils[350] == false)
-                    //{
-                    //    cylinder5_ON = false;
-                    //}
                     if (coils[352] == true)
                     {
                         cylinder6.transform.localPosition = Vector3.MoveTowards(cylinder6.transform.localPosition, new Vector3(0, 0, -0.55f), moveSpeed * Time.deltaTime);
@@ -204,7 +217,7 @@ public class DT : MonoBehaviour
                     }
                     if (coils[353] == true)
                     {
-                        gripper.transform.localPosition = Vector3.MoveTowards(gripper.transform.localPosition, new Vector3(18.5f, 0, 0), 10 * moveSpeed * Time.deltaTime);
+                        gripper.transform.localPosition = Vector3.MoveTowards(gripper.transform.localPosition, new Vector3(-18.5f, 0, 0), 10 * moveSpeed * Time.deltaTime);
 
                     }
                     else if (coils[353] == false)
@@ -212,24 +225,24 @@ public class DT : MonoBehaviour
                         gripper.transform.localPosition = Vector3.MoveTowards(gripper.transform.localPosition, new Vector3(0, 0, 0), 10 * moveSpeed * Time.deltaTime);
                     }
 
-                    if (coils[560])
-                    {
-                        objectSpawned = false; // 오브젝트 재생성 가능
-                        cylinder1_OFF = false; // 초기화해서 재생성 방지
-                    }
+                    //if (coils[560])
+                    //{
+                    //    objectSpawned = false; // 오브젝트 재생성 가능
+                    //    cylinder1_OFF = false; // 초기화해서 재생성 방지
+                    //}
 
                     if (cylinder1_ON && !cylinder1_OFF)
                     {
                         cylinder1.transform.localPosition = Vector3.MoveTowards(cylinder1.transform.localPosition, new Vector3(1.0f, 0, 0), moveSpeed * Time.deltaTime);
-                        if (cylinder1.transform.localPosition.x >= 0.4f && !objectSpawned)
-                        {
-                            Vector3 spawnPosition = new Vector3(-808, 130, 318);
-                            Quaternion spawnRotation = Quaternion.identity;
-                            GameObject newObj = Instantiate(objectPrefab, spawnPosition, spawnRotation);
-                            newObj.transform.SetParent(conveyorTransform);
-                            batteryCase.Add(newObj);
-                            objectSpawned = true; // 오브젝트가 생성되었음을 표시
-                        }
+                        //if (cylinder1.transform.localPosition.x >= 0.4f && !objectSpawned)
+                        //{
+                        //    Vector3 spawnPosition = new Vector3(-808, 130, 318);
+                        //    Quaternion spawnRotation = Quaternion.identity;
+                        //    GameObject newObj = Instantiate(objectPrefab, spawnPosition, spawnRotation);
+                        //    newObj.transform.SetParent(conveyorTransform);
+                        //    batteryCase.Add(newObj);
+                        //    objectSpawned = true; // 오브젝트가 생성되었음을 표시
+                        //}
                     }
                     else if (cylinder1_OFF && !cylinder1_ON)
                     {
