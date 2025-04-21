@@ -38,11 +38,14 @@ public class DT : MonoBehaviour
 
     private bool isConnected = false;
     private bool[] objectSpawned = new bool[] { false, false, false, false };
+    private Vector3[] onpos = new Vector3[] { new Vector3(1.0f, 0, 0), new Vector3(0.45f, 0, 0), new Vector3(0.45f, 0, 0), new Vector3(0.45f, 0, 0) };
+    private Vector3[] offpos = new Vector3[] { Vector3.zero, new Vector3(-0.3f, 0, 0), new Vector3(-0.3f, 0, 0), new Vector3(-0.3f, 0, 0) };
+    private Vector3[] spawnPosition = new Vector3[] { new Vector3(0.25f, 4.63f, -0.81f), new Vector3(0.180f, 2.59f, -0.983f), new Vector3(0.180f, 1.77f, -0.983f), new Vector3(0.180f, 0.95f, -0.983f)};
     private bool[] coils = new bool[1024];
     private ushort[] registers = new ushort[125];
 
     private float moveSpeed = 3.0f;
-    private float conveyorSpeed = 0.5f;
+    private float conveyorSpeed = 1.0f;
 
     private Queue<GameObject> Cell = new Queue<GameObject>();
     private List<GameObject> batteryCase = new List<GameObject>();
@@ -140,6 +143,22 @@ public class DT : MonoBehaviour
         MoveConveyor(conveyors[2], coils[351]);
     }
 
+    private void ObjectSpawn(ref bool isSpawned, Transform conveyor, GameObject cylinder, GameObject obj, Vector3 onpos, Vector3 offpos, Vector3 spawnPosition)
+    {
+        if (!isSpawned && Vector3.Distance(cylinder.transform.localPosition, onpos) < 0.001f)
+        {
+            GameObject newObj = Instantiate(obj);
+            newObj.transform.SetParent(conveyor);
+            //newObj.AddComponent<ConveyorItem>();
+            newObj.transform.localPosition = spawnPosition; // 부모 기준 위치
+            isSpawned = true;
+        }
+        if (isSpawned && Vector3.Distance(cylinder.transform.localPosition, offpos) < 0.001f)
+        {
+            isSpawned = false;
+        }
+    }
+
     IEnumerator ReadInputRegisters()
     {
         while (true)
@@ -185,55 +204,64 @@ public class DT : MonoBehaviour
                     UpdateDoubleStates();
                     ApplyActuatorMotions();
 
+                    ObjectSpawn(ref objectSpawned[0], conveyors[1], cylinders[0], pack, onpos[0], offpos[0], spawnPosition[0]);
+                    ObjectSpawn(ref objectSpawned[1], conveyors[0], cylinders[1], cell1, onpos[1], offpos[1], spawnPosition[1]);
+                    ObjectSpawn(ref objectSpawned[2], conveyors[0], cylinders[2], cell2, onpos[2], offpos[2], spawnPosition[2]);
+                    ObjectSpawn(ref objectSpawned[3], conveyors[0], cylinders[3], cell3, onpos[3], offpos[3], spawnPosition[3]);
+                    
+                    
+                    Debug.Log($"IsSpawned : { String.Join(", ", objectSpawned) }");
+                    
 
-                    if (!objectSpawned[0] && Vector3.Distance(cylinders[0].transform.localPosition, new Vector3(1.0f,0,0)) < 0.001f)
-                    {
-                        GameObject newObj = Instantiate(pack);
-                        newObj.transform.SetParent(conveyors[1]);
-                        newObj.AddComponent<ConveyorItem>();
-                        newObj.transform.localPosition = new Vector3(0.25f,4.63f,-0.81f); // 부모 기준 위치
-                        objectSpawned[0] = true;
-                    }
-                    if (objectSpawned[0] && Vector3.Distance(cylinders[0].transform.localPosition, new Vector3(0, 0, 0)) < 0.001f)
-                    {
-                        objectSpawned[0] = false; // 오브젝트 재생성 가능
-                    }
-                    if (!objectSpawned[1] && Vector3.Distance(cylinders[1].transform.localPosition, new Vector3(0.45f, 0, 0)) < 0.001f)
-                    {
-                        GameObject newObj = Instantiate(cell1);
-                        newObj.transform.SetParent(conveyors[0]);
-                        newObj.AddComponent<ConveyorItem>();
-                        newObj.transform.localPosition = new Vector3(0.180f, 2.59f, -0.983f); // 부모 기준 위치
-                        objectSpawned[1] = true;
-                    }
-                    if (objectSpawned[1] && Vector3.Distance(cylinders[1].transform.localPosition, new Vector3(-0.3f, 0, 0)) < 0.001f)
-                    {
-                        objectSpawned[1] = false; // 오브젝트 재생성 가능
-                    }
-                    if (!objectSpawned[2] && Vector3.Distance(cylinders[2].transform.localPosition, new Vector3(0.45f, 0, 0)) < 0.001f)
-                    {
-                        GameObject newObj = Instantiate(cell2);
-                        newObj.transform.SetParent(conveyors[0]);
-                        newObj.AddComponent<ConveyorItem>();
-                        newObj.transform.localPosition = new Vector3(0.180f, 0.95f, -0.983f); // 부모 기준 위치
-                        objectSpawned[2] = true;
-                    }
-                    if (objectSpawned[2] && Vector3.Distance(cylinders[2].transform.localPosition, new Vector3(-0.3f, 0, 0)) < 0.001f)
-                    {
-                        objectSpawned[2] = false; // 오브젝트 재생성 가능
-                    }
-                    if (!objectSpawned[3] && Vector3.Distance(cylinders[3].transform.localPosition, new Vector3(0.45f, 0, 0)) < 0.001f)
-                    {
-                        GameObject newObj = Instantiate(cell3);
-                        newObj.transform.SetParent(conveyors[0]);
-                        newObj.AddComponent<ConveyorItem>();
-                        newObj.transform.localPosition = new Vector3(0, 0, 0); // 부모 기준 위치
-                        objectSpawned[3] = true;
-                    }
-                    if (objectSpawned[3] && Vector3.Distance(cylinders[3].transform.localPosition, new Vector3(-0.3f, 0, 0)) < 0.001f)
-                    {
-                        objectSpawned[3] = false; // 오브젝트 재생성 가능
-                    }
+
+                    //if (!objectSpawned[0] && Vector3.Distance(cylinders[0].transform.localPosition, new Vector3(1.0f,0,0)) < 0.001f)
+                    //{
+                    //    GameObject newObj = Instantiate(pack);
+                    //    newObj.transform.SetParent(conveyors[1]);
+                    //    //newObj.AddComponent<ConveyorItem>();
+                    //    newObj.transform.localPosition = new Vector3(0.25f,4.63f,-0.81f); // 부모 기준 위치
+                    //    objectSpawned[0] = true;
+                    //}
+                    //if (objectSpawned[0] && Vector3.Distance(cylinders[0].transform.localPosition, new Vector3(0, 0, 0)) < 0.001f)
+                    //{
+                    //    objectSpawned[0] = false; // 오브젝트 재생성 가능
+                    //}
+                    //if (!objectSpawned[1] && Vector3.Distance(cylinders[1].transform.localPosition, new Vector3(0.45f, 0, 0)) < 0.001f)
+                    //{
+                    //    GameObject newObj = Instantiate(cell1);
+                    //    newObj.transform.SetParent(conveyors[0]);
+                    //    //newObj.AddComponent<ConveyorItem>();
+                    //    newObj.transform.localPosition = new Vector3(0.180f, 2.59f, -0.983f); // 부모 기준 위치
+                    //    objectSpawned[1] = true;
+                    //}
+                    //if (objectSpawned[1] && Vector3.Distance(cylinders[1].transform.localPosition, new Vector3(-0.3f, 0, 0)) < 0.001f)
+                    //{
+                    //    objectSpawned[1] = false; // 오브젝트 재생성 가능
+                    //}
+                    //if (!objectSpawned[2] && Vector3.Distance(cylinders[2].transform.localPosition, new Vector3(0.45f, 0, 0)) < 0.001f)
+                    //{
+                    //    GameObject newObj = Instantiate(cell2);
+                    //    newObj.transform.SetParent(conveyors[0]);
+                    //    //newObj.AddComponent<ConveyorItem>();
+                    //    newObj.transform.localPosition = new Vector3(0.180f, 1.77f, -0.983f); // 부모 기준 위치
+                    //    objectSpawned[2] = true;
+                    //}
+                    //if (objectSpawned[2] && Vector3.Distance(cylinders[2].transform.localPosition, new Vector3(-0.3f, 0, 0)) < 0.001f)
+                    //{
+                    //    objectSpawned[2] = false; // 오브젝트 재생성 가능
+                    //}
+                    //if (!objectSpawned[3] && Vector3.Distance(cylinders[3].transform.localPosition, new Vector3(0.45f, 0, 0)) < 0.001f)
+                    //{
+                    //    GameObject newObj = Instantiate(cell3);
+                    //    newObj.transform.SetParent(conveyors[0]);
+                    //    //newObj.AddComponent<ConveyorItem>();
+                    //    newObj.transform.localPosition = new Vector3(0.180f, 0.95f, -0.983f); // 부모 기준 위치
+                    //    objectSpawned[3] = true;
+                    //}
+                    //if (objectSpawned[3] && Vector3.Distance(cylinders[3].transform.localPosition, new Vector3(-0.3f, 0, 0)) < 0.001f)
+                    //{
+                    //    objectSpawned[3] = false; // 오브젝트 재생성 가능
+                    //}
 
 
                     //if (coils[560])
@@ -257,7 +285,7 @@ public class DT : MonoBehaviour
         try
         {
             client = new TcpClient();
-            await client.ConnectAsync("10.10.24.179", 1502);
+            await client.ConnectAsync("127.0.0.1", 1502);
 
             isConnected = client.Connected;
             if (isConnected)
