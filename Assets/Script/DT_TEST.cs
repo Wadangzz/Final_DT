@@ -20,9 +20,12 @@ public class DT : MonoBehaviour
     [SerializeField] private GameObject[] robot2 = new GameObject[4];
     [SerializeField] private GameObject[] robot3 = new GameObject[4];
 
-    [Header("Servo & Prefabs")]
+    [Header("Servo & Casem & Cell")]
     [SerializeField] private GameObject servoTower;
-    [SerializeField] private GameObject objectPrefab;
+    [SerializeField] private GameObject pack;
+    [SerializeField] private GameObject cell1;
+    [SerializeField] private GameObject cell2;
+    [SerializeField] private GameObject cell3;
 
     [Header("Conveyors")]
     [SerializeField] private Transform[] conveyors = new Transform[3];
@@ -34,12 +37,12 @@ public class DT : MonoBehaviour
     private bool[] cylinderOFF = new bool[6];
 
     private bool isConnected = false;
-    private bool objectSpawned = false;
+    private bool[] objectSpawned = new bool[] { false, false, false, false };
     private bool[] coils = new bool[1024];
     private ushort[] registers = new ushort[125];
 
     private float moveSpeed = 3.0f;
-    private float conveyorSpeed = 50.0f;
+    private float conveyorSpeed = 0.5f;
 
     private Queue<GameObject> Cell = new Queue<GameObject>();
     private List<GameObject> batteryCase = new List<GameObject>();
@@ -104,8 +107,22 @@ public class DT : MonoBehaviour
         obj.transform.localPosition = Vector3.MoveTowards(obj.transform.localPosition, target, moveSpeed * speedMultiplier * Time.deltaTime);
     }
 
+    private void MoveConveyor(Transform conveyor, bool condition)
+    {
+        if (condition)
+        {
+            for (int i = 0; i < conveyor.childCount; i++)
+            {
+                Transform child = conveyor.GetChild(i);
+                ConveyorItem item = child.GetComponent<ConveyorItem>();
+                if (item != null && item.isStopped) continue; // 멈춘 애는 스킵
 
-    private void ApplyCylinderMotions()
+                child.localPosition += Vector3.down * conveyorSpeed * Time.deltaTime;
+            }
+        }
+    }
+
+    private void ApplyActuatorMotions()
     {
         // 양측 실린더
         MoveDouble(0, new Vector3(1.0f, 0, 0), Vector3.zero);
@@ -117,8 +134,11 @@ public class DT : MonoBehaviour
         MoveSingle(cylinders[4], new Vector3(0, 0, -0.55f), Vector3.zero, coils[348]);
         MoveSingle(cylinders[5], new Vector3(0, 0, -0.55f), Vector3.zero, coils[352]);
         MoveSingle(gripper, new Vector3(-18.5f, 0, 0), Vector3.zero, coils[353], 10f);
-    }
 
+        MoveConveyor(conveyors[0], coils[349]);
+        MoveConveyor(conveyors[1], coils[350]);
+        MoveConveyor(conveyors[2], coils[351]);
+    }
 
     IEnumerator ReadInputRegisters()
     {
@@ -163,7 +183,58 @@ public class DT : MonoBehaviour
                 {
                     coils = modbusMaster.ReadInputs(1, 0, 1024);
                     UpdateDoubleStates();
-                    ApplyCylinderMotions();
+                    ApplyActuatorMotions();
+
+
+                    if (!objectSpawned[0] && Vector3.Distance(cylinders[0].transform.localPosition, new Vector3(1.0f,0,0)) < 0.001f)
+                    {
+                        GameObject newObj = Instantiate(pack);
+                        newObj.transform.SetParent(conveyors[1]);
+                        newObj.AddComponent<ConveyorItem>();
+                        newObj.transform.localPosition = new Vector3(0.25f,4.63f,-0.81f); // 부모 기준 위치
+                        objectSpawned[0] = true;
+                    }
+                    if (objectSpawned[0] && Vector3.Distance(cylinders[0].transform.localPosition, new Vector3(0, 0, 0)) < 0.001f)
+                    {
+                        objectSpawned[0] = false; // 오브젝트 재생성 가능
+                    }
+                    if (!objectSpawned[1] && Vector3.Distance(cylinders[1].transform.localPosition, new Vector3(0.45f, 0, 0)) < 0.001f)
+                    {
+                        GameObject newObj = Instantiate(cell1);
+                        newObj.transform.SetParent(conveyors[0]);
+                        newObj.AddComponent<ConveyorItem>();
+                        newObj.transform.localPosition = new Vector3(0.180f, 2.59f, -0.983f); // 부모 기준 위치
+                        objectSpawned[1] = true;
+                    }
+                    if (objectSpawned[1] && Vector3.Distance(cylinders[1].transform.localPosition, new Vector3(-0.3f, 0, 0)) < 0.001f)
+                    {
+                        objectSpawned[1] = false; // 오브젝트 재생성 가능
+                    }
+                    if (!objectSpawned[2] && Vector3.Distance(cylinders[2].transform.localPosition, new Vector3(0.45f, 0, 0)) < 0.001f)
+                    {
+                        GameObject newObj = Instantiate(cell2);
+                        newObj.transform.SetParent(conveyors[0]);
+                        newObj.AddComponent<ConveyorItem>();
+                        newObj.transform.localPosition = new Vector3(0.180f, 0.95f, -0.983f); // 부모 기준 위치
+                        objectSpawned[2] = true;
+                    }
+                    if (objectSpawned[2] && Vector3.Distance(cylinders[2].transform.localPosition, new Vector3(-0.3f, 0, 0)) < 0.001f)
+                    {
+                        objectSpawned[2] = false; // 오브젝트 재생성 가능
+                    }
+                    if (!objectSpawned[3] && Vector3.Distance(cylinders[3].transform.localPosition, new Vector3(0.45f, 0, 0)) < 0.001f)
+                    {
+                        GameObject newObj = Instantiate(cell3);
+                        newObj.transform.SetParent(conveyors[0]);
+                        newObj.AddComponent<ConveyorItem>();
+                        newObj.transform.localPosition = new Vector3(0, 0, 0); // 부모 기준 위치
+                        objectSpawned[3] = true;
+                    }
+                    if (objectSpawned[3] && Vector3.Distance(cylinders[3].transform.localPosition, new Vector3(-0.3f, 0, 0)) < 0.001f)
+                    {
+                        objectSpawned[3] = false; // 오브젝트 재생성 가능
+                    }
+
 
                     //if (coils[560])
                     //{
@@ -186,7 +257,7 @@ public class DT : MonoBehaviour
         try
         {
             client = new TcpClient();
-            await client.ConnectAsync("127.0.0.1", 1502);
+            await client.ConnectAsync("10.10.24.179", 1502);
 
             isConnected = client.Connected;
             if (isConnected)
