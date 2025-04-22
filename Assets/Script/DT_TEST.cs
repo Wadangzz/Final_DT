@@ -20,15 +20,21 @@ public class DT : MonoBehaviour
     [SerializeField] private GameObject[] robot2 = new GameObject[4];
     [SerializeField] private GameObject[] robot3 = new GameObject[4];
 
-    [Header("Servo & Casem & Cell")]
+    [Header("Servo & Object")]
     [SerializeField] private GameObject servoTower;
     [SerializeField] private GameObject pack;
     [SerializeField] private GameObject cell1;
     [SerializeField] private GameObject cell2;
     [SerializeField] private GameObject cell3;
+    [SerializeField] private GameObject packagingCap;
+    [SerializeField] private Transform tower;
 
     [Header("Conveyors")]
     [SerializeField] private Transform[] conveyors = new Transform[3];
+
+    [SerializeField] private float moveSpeed = 3.0f;
+    [SerializeField] private float conveyorSpeed = 1.5f;
+
 
     private float[][] joints = new float[3][] { new float[4], new float[4], new float[4] };
     private float servoPosition = 0f;
@@ -37,18 +43,16 @@ public class DT : MonoBehaviour
     private bool[] cylinderOFF = new bool[6];
 
     private bool isConnected = false;
-    private bool[] objectSpawned = new bool[] { false, false, false, false };
+    private bool[] objectSpawned = new bool[] { false, false, false, false, false };
     private Vector3[] onpos = new Vector3[] { new Vector3(1.0f, 0, 0), new Vector3(0.45f, 0, 0), new Vector3(0.45f, 0, 0), new Vector3(0.45f, 0, 0) };
     private Vector3[] offpos = new Vector3[] { Vector3.zero, new Vector3(-0.3f, 0, 0), new Vector3(-0.3f, 0, 0), new Vector3(-0.3f, 0, 0) };
-    private Vector3[] spawnPosition = new Vector3[] { new Vector3(0.25f, 4.63f, -0.81f), new Vector3(0.180f, 2.59f, -0.983f), new Vector3(0.180f, 1.77f, -0.983f), new Vector3(0.180f, 0.95f, -0.983f)};
+    private Vector3[] spawnPosition = new Vector3[] { new Vector3(0.25f, 4.63f, -0.81f), new Vector3(0.180f, 2.59f, -0.983f), new Vector3(0.180f, 1.77f, -0.983f), new Vector3(0.180f, 0.95f, -0.983f), new Vector3(14.1f, 187.0f, -0.6f) };
     private bool[] coils = new bool[1024];
     private ushort[] registers = new ushort[125];
 
-    private float moveSpeed = 3.0f;
-    private float conveyorSpeed = 1.0f;
 
-    private Queue<GameObject> Cell = new Queue<GameObject>();
-    private List<GameObject> batteryCase = new List<GameObject>();
+    //private Queue<GameObject> Cell = new Queue<GameObject>();
+    //private List<GameObject> batteryCase = new List<GameObject>();
 
     void Start()
     {
@@ -119,8 +123,21 @@ public class DT : MonoBehaviour
                 Transform child = conveyor.GetChild(i);
                 ConveyorItem item = child.GetComponent<ConveyorItem>();
                 if (item != null && item.isStopped) continue; // ¸ØÃá ¾Ö´Â ½ºÅµ
-
                 child.localPosition += Vector3.down * conveyorSpeed * Time.deltaTime;
+            }
+        }
+    }
+
+    private void MoveConveyor2(Transform conveyor, bool condition)
+    {
+        if (condition)
+        {
+            for (int i = 0; i < conveyor.childCount; i++)
+            {
+                Transform child = conveyor.GetChild(i);
+                ConveyorItem item = child.GetComponent<ConveyorItem>();
+                if (item != null && item.isStopped) continue; // ¸ØÃá ¾Ö´Â ½ºÅµ
+                child.localPosition += Vector3.up * conveyorSpeed * Time.deltaTime;
             }
         }
     }
@@ -140,20 +157,36 @@ public class DT : MonoBehaviour
 
         MoveConveyor(conveyors[0], coils[349]);
         MoveConveyor(conveyors[1], coils[350]);
-        MoveConveyor(conveyors[2], coils[351]);
+        MoveConveyor2(conveyors[2], coils[351]);
     }
 
-    private void ObjectSpawn(ref bool isSpawned, Transform conveyor, GameObject cylinder, GameObject obj, Vector3 onpos, Vector3 offpos, Vector3 spawnPosition)
+    private void ObjectSpawn(ref bool isSpawned, Transform parent, GameObject cylinder, GameObject obj, Vector3 onpos, Vector3 offpos, Vector3 spawnPosition)
     {
         if (!isSpawned && Vector3.Distance(cylinder.transform.localPosition, onpos) < 0.001f)
         {
             GameObject newObj = Instantiate(obj);
-            newObj.transform.SetParent(conveyor);
+            newObj.transform.SetParent(parent);
             //newObj.AddComponent<ConveyorItem>();
             newObj.transform.localPosition = spawnPosition; // ºÎ¸ð ±âÁØ À§Ä¡
             isSpawned = true;
         }
         if (isSpawned && Vector3.Distance(cylinder.transform.localPosition, offpos) < 0.001f)
+        {
+            isSpawned = false;
+        }
+    }
+
+    private void ObjectSpawn2(ref bool isSpawned, Transform parent, GameObject obj, Vector3 spawnPosition)
+    {
+        if (!isSpawned && coils[121] && registers[80] == 0)
+        {
+            GameObject newObj = Instantiate(obj);
+            newObj.transform.SetParent(parent);
+            //newObj.AddComponent<ConveyorItem>();
+            newObj.transform.localPosition = spawnPosition; // ºÎ¸ð ±âÁØ À§Ä¡
+            isSpawned = true;
+        }
+        if (isSpawned && !coils[121])
         {
             isSpawned = false;
         }
@@ -168,7 +201,7 @@ public class DT : MonoBehaviour
                 if (modbusMaster != null)
                 {
                     registers = modbusMaster.ReadInputRegisters(1, 0, 125);
-                    servoPosition = RegistersToInt32(registers[71], registers[72]) / 2f;
+                    servoPosition = RegistersToInt32(registers[71], registers[72]);
 
                     for (int i = 0; i < 4; i++)
                     {
@@ -208,6 +241,7 @@ public class DT : MonoBehaviour
                     ObjectSpawn(ref objectSpawned[1], conveyors[0], cylinders[1], cell1, onpos[1], offpos[1], spawnPosition[1]);
                     ObjectSpawn(ref objectSpawned[2], conveyors[0], cylinders[2], cell2, onpos[2], offpos[2], spawnPosition[2]);
                     ObjectSpawn(ref objectSpawned[3], conveyors[0], cylinders[3], cell3, onpos[3], offpos[3], spawnPosition[3]);
+                    ObjectSpawn2(ref objectSpawned[4], tower, packagingCap, spawnPosition[4]);
                     
                     
                     Debug.Log($"IsSpawned : { String.Join(", ", objectSpawned) }");
@@ -285,7 +319,7 @@ public class DT : MonoBehaviour
         try
         {
             client = new TcpClient();
-            await client.ConnectAsync("127.0.0.1", 1502);
+            await client.ConnectAsync("10.10.24.179", 1502);
 
             isConnected = client.Connected;
             if (isConnected)

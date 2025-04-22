@@ -6,6 +6,14 @@ TagManager:
   tags:
   - Stopper
   - Pack
+  - Gripper
+  - Belt
+  - Tower
+  - Picker
+  - Picker2
+  - Endpoint
+  - Cap
+  - NG
   layers:
   - Default
   - TransparentFX
