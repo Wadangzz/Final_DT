@@ -52,14 +52,13 @@ public class ConveyorItem : MonoBehaviour
                 int index = other.transform.childCount;
 
                 if (index == 3)
-                    targetLocalPos = new Vector3(0.8f, 51.3f, 59.0f);
+                    targetLocalPos = new Vector3(-1.0f, -14.0f, -2.0f);
 
                 Vector3 worldTargetPos = other.transform.TransformPoint(targetLocalPos);
 
                 // Gripper에서 떨어뜨리고 Pack으로 붙이기
                 transform.SetParent(other.transform, true);
                 transform.position = worldTargetPos;
-                transform.rotation = Quaternion.Euler(0, -90.0f, 0);
             }
         }
 
@@ -102,7 +101,7 @@ public class ConveyorItem : MonoBehaviour
             Vector3 worldTargetPos;
             if (CompareTag("Cap"))
             {
-                worldTargetPos = other.transform.TransformPoint(new Vector3(1.51f, 0.315f, -1.17f));
+                worldTargetPos = other.transform.TransformPoint(new Vector3(0.86f, 0.31f, -0.6f));
 
                 transform.SetParent(other.transform, true);
                 transform.position = worldTargetPos;

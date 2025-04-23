@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Unity.Hierarchy;
 
 public class DT : MonoBehaviour
 {
@@ -46,7 +47,7 @@ public class DT : MonoBehaviour
     private bool[] objectSpawned = new bool[] { false, false, false, false, false };
     private Vector3[] onpos = new Vector3[] { new Vector3(1.0f, 0, 0), new Vector3(0.45f, 0, 0), new Vector3(0.45f, 0, 0), new Vector3(0.45f, 0, 0) };
     private Vector3[] offpos = new Vector3[] { Vector3.zero, new Vector3(-0.3f, 0, 0), new Vector3(-0.3f, 0, 0), new Vector3(-0.3f, 0, 0) };
-    private Vector3[] spawnPosition = new Vector3[] { new Vector3(0.25f, 4.63f, -0.81f), new Vector3(0.180f, 2.59f, -0.983f), new Vector3(0.180f, 1.77f, -0.983f), new Vector3(0.180f, 0.95f, -0.983f), new Vector3(14.1f, 187.0f, -0.6f) };
+    private Vector3[] spawnPosition = new Vector3[] { new Vector3(0.25f, 4.63f, -0.81f), new Vector3(0.180f, 2.59f, -0.983f), new Vector3(0.180f, 1.77f, -0.983f), new Vector3(0.180f, 0.95f, -0.983f), new Vector3(-59.5f, 256.7f, -0.6f) };
     private bool[] coils = new bool[1024];
     private ushort[] registers = new ushort[125];
 
@@ -161,34 +162,40 @@ public class DT : MonoBehaviour
     }
 
     private void ObjectSpawn(ref bool isSpawned, Transform parent, GameObject cylinder, GameObject obj, Vector3 onpos, Vector3 offpos, Vector3 spawnPosition)
-    {
-        if (!isSpawned && Vector3.Distance(cylinder.transform.localPosition, onpos) < 0.001f)
+    {   
+        if (coils[504])
         {
-            GameObject newObj = Instantiate(obj);
-            newObj.transform.SetParent(parent);
-            //newObj.AddComponent<ConveyorItem>();
-            newObj.transform.localPosition = spawnPosition; // 부모 기준 위치
-            isSpawned = true;
-        }
-        if (isSpawned && Vector3.Distance(cylinder.transform.localPosition, offpos) < 0.001f)
-        {
-            isSpawned = false;
+            if (!isSpawned && Vector3.Distance(cylinder.transform.localPosition, onpos) < 0.001f)
+            {
+                GameObject newObj = Instantiate(obj);
+                newObj.transform.SetParent(parent);
+                //newObj.AddComponent<ConveyorItem>();
+                newObj.transform.localPosition = spawnPosition; // 부모 기준 위치
+                isSpawned = true;
+            }
+            if (isSpawned && Vector3.Distance(cylinder.transform.localPosition, offpos) < 0.001f)
+            {
+                isSpawned = false;
+            }
         }
     }
 
     private void ObjectSpawn2(ref bool isSpawned, Transform parent, GameObject obj, Vector3 spawnPosition)
     {
-        if (!isSpawned && coils[121] && registers[80] == 0)
+        if (coils[504])
         {
-            GameObject newObj = Instantiate(obj);
-            newObj.transform.SetParent(parent);
-            //newObj.AddComponent<ConveyorItem>();
-            newObj.transform.localPosition = spawnPosition; // 부모 기준 위치
-            isSpawned = true;
-        }
-        if (isSpawned && !coils[121])
-        {
-            isSpawned = false;
+            if (!isSpawned && coils[121] && registers[80] == 0)
+            {
+                GameObject newObj = Instantiate(obj);
+                newObj.transform.SetParent(parent);
+                //newObj.AddComponent<ConveyorItem>();
+                newObj.transform.localPosition = spawnPosition; // 부모 기준 위치
+                isSpawned = true;
+            }
+            if (isSpawned && !coils[121])
+            {
+                isSpawned = false;
+            }
         }
     }
 
