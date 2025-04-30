@@ -3,9 +3,9 @@ using NModbus;
 using System;
 using System.Net.Sockets;
 using System.Collections;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using Unity.Hierarchy;
+
+
 
 public class DT : MonoBehaviour
 {
@@ -34,7 +34,7 @@ public class DT : MonoBehaviour
     [SerializeField] private Transform[] conveyors = new Transform[3];
 
     [SerializeField] private float moveSpeed = 3.0f;
-    [SerializeField] private float conveyorSpeed = 1.5f;
+    [SerializeField] private float conveyorSpeed = 1.0f;
 
 
     private float[][] joints = new float[3][] { new float[4], new float[4], new float[4] };
@@ -44,6 +44,7 @@ public class DT : MonoBehaviour
     private bool[] cylinderOFF = new bool[6];
 
     private bool isConnected = false;
+    private bool isConnecting = false;
     private bool[] objectSpawned = new bool[] { false, false, false, false, false };
     private Vector3[] onpos = new Vector3[] { new Vector3(1.0f, 0, 0), new Vector3(0.45f, 0, 0), new Vector3(0.45f, 0, 0), new Vector3(0.45f, 0, 0) };
     private Vector3[] offpos = new Vector3[] { Vector3.zero, new Vector3(-0.3f, 0, 0), new Vector3(-0.3f, 0, 0), new Vector3(-0.3f, 0, 0) };
@@ -52,13 +53,11 @@ public class DT : MonoBehaviour
     private ushort[] registers = new ushort[125];
 
 
-    //private Queue<GameObject> Cell = new Queue<GameObject>();
-    //private List<GameObject> batteryCase = new List<GameObject>();
-
     void Start()
     {
         Debug.Log("Start");
         Task.Run(() => Connect());
+        //StartCoroutine(RunDT());
         StartCoroutine(ReadInputRegisters());
         StartCoroutine(ReadInputs());
     }
@@ -128,7 +127,7 @@ public class DT : MonoBehaviour
             }
         }
     }
-
+    // 다른 컨베이어랑 좌표가 반대라 따로 선언 
     private void MoveConveyor2(Transform conveyor, bool condition)
     {
         if (condition)
@@ -162,7 +161,7 @@ public class DT : MonoBehaviour
     }
 
     private void ObjectSpawn(ref bool isSpawned, Transform parent, GameObject cylinder, GameObject obj, Vector3 onpos, Vector3 offpos, Vector3 spawnPosition)
-    {   
+    {
         if (coils[504])
         {
             if (!isSpawned && Vector3.Distance(cylinder.transform.localPosition, onpos) < 0.001f)
@@ -198,14 +197,44 @@ public class DT : MonoBehaviour
             }
         }
     }
+    //IEnumerator RunDT()
+    //{
+    //    while (true)
+    //    {
+    //        if (modbusMaster != null || isConnected)
+    //        {
+    //            StartCoroutine(ReadInputRegisters());
+    //            StartCoroutine(ReadInputs());
+    //            yield return null;
+    //        }
+            
+    //        else if (modbusMaster == null || !isConnected)
+    //        {
+    //            if (isConnecting)
+    //            {
+    //                continue;
+    //            }
+    //            else
+    //            {
+    //                Task.Run(() => Connect());
+    //                yield return new WaitForSeconds(1.0f); ;
+    //            }
+    //        }
+    //    }
+    //}
 
     IEnumerator ReadInputRegisters()
     {
         while (true)
         {
-            try
+            if (modbusMaster == null)
             {
-                if (modbusMaster != null)
+                yield return new WaitForSeconds(0.5f);
+                continue;
+            }
+            else if (modbusMaster != null)
+            {
+                try
                 {
                     registers = modbusMaster.ReadInputRegisters(1, 0, 125);
                     servoPosition = RegistersToInt32(registers[71], registers[72]);
@@ -223,22 +252,30 @@ public class DT : MonoBehaviour
 
                     servoTower.transform.localPosition = new Vector3(0, servoPosition / 10000f, 0);
                 }
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"Exception: {e.Message}\n{e.StackTrace}");
+                catch (Exception e)
+                {
+                    Debug.LogError($"Exception: {e.Message}\n{e.StackTrace}");
+                    DisConnect();
+                    if (!isConnecting)
+                        Task.Run(() => Connect());
+                }
             }
             yield return new WaitForSeconds(0.001f);
-        }
+        } 
     }
 
     IEnumerator ReadInputs()
     {
         while (true)
         {
-            try
+            if (modbusMaster == null)
             {
-                if (modbusMaster != null)
+                yield return new WaitForSeconds(0.5f);
+                continue;
+            }
+            else if (modbusMaster != null)
+            {
+                try
                 {
                     coils = modbusMaster.ReadInputs(1, 0, 1024);
                     UpdateDoubleStates();
@@ -249,73 +286,17 @@ public class DT : MonoBehaviour
                     ObjectSpawn(ref objectSpawned[2], conveyors[0], cylinders[2], cell2, onpos[2], offpos[2], spawnPosition[2]);
                     ObjectSpawn(ref objectSpawned[3], conveyors[0], cylinders[3], cell3, onpos[3], offpos[3], spawnPosition[3]);
                     ObjectSpawn2(ref objectSpawned[4], tower, packagingCap, spawnPosition[4]);
-                    
-                    
-                    Debug.Log($"IsSpawned : { String.Join(", ", objectSpawned) }");
-                    
 
 
-                    //if (!objectSpawned[0] && Vector3.Distance(cylinders[0].transform.localPosition, new Vector3(1.0f,0,0)) < 0.001f)
-                    //{
-                    //    GameObject newObj = Instantiate(pack);
-                    //    newObj.transform.SetParent(conveyors[1]);
-                    //    //newObj.AddComponent<ConveyorItem>();
-                    //    newObj.transform.localPosition = new Vector3(0.25f,4.63f,-0.81f); // 부모 기준 위치
-                    //    objectSpawned[0] = true;
-                    //}
-                    //if (objectSpawned[0] && Vector3.Distance(cylinders[0].transform.localPosition, new Vector3(0, 0, 0)) < 0.001f)
-                    //{
-                    //    objectSpawned[0] = false; // 오브젝트 재생성 가능
-                    //}
-                    //if (!objectSpawned[1] && Vector3.Distance(cylinders[1].transform.localPosition, new Vector3(0.45f, 0, 0)) < 0.001f)
-                    //{
-                    //    GameObject newObj = Instantiate(cell1);
-                    //    newObj.transform.SetParent(conveyors[0]);
-                    //    //newObj.AddComponent<ConveyorItem>();
-                    //    newObj.transform.localPosition = new Vector3(0.180f, 2.59f, -0.983f); // 부모 기준 위치
-                    //    objectSpawned[1] = true;
-                    //}
-                    //if (objectSpawned[1] && Vector3.Distance(cylinders[1].transform.localPosition, new Vector3(-0.3f, 0, 0)) < 0.001f)
-                    //{
-                    //    objectSpawned[1] = false; // 오브젝트 재생성 가능
-                    //}
-                    //if (!objectSpawned[2] && Vector3.Distance(cylinders[2].transform.localPosition, new Vector3(0.45f, 0, 0)) < 0.001f)
-                    //{
-                    //    GameObject newObj = Instantiate(cell2);
-                    //    newObj.transform.SetParent(conveyors[0]);
-                    //    //newObj.AddComponent<ConveyorItem>();
-                    //    newObj.transform.localPosition = new Vector3(0.180f, 1.77f, -0.983f); // 부모 기준 위치
-                    //    objectSpawned[2] = true;
-                    //}
-                    //if (objectSpawned[2] && Vector3.Distance(cylinders[2].transform.localPosition, new Vector3(-0.3f, 0, 0)) < 0.001f)
-                    //{
-                    //    objectSpawned[2] = false; // 오브젝트 재생성 가능
-                    //}
-                    //if (!objectSpawned[3] && Vector3.Distance(cylinders[3].transform.localPosition, new Vector3(0.45f, 0, 0)) < 0.001f)
-                    //{
-                    //    GameObject newObj = Instantiate(cell3);
-                    //    newObj.transform.SetParent(conveyors[0]);
-                    //    //newObj.AddComponent<ConveyorItem>();
-                    //    newObj.transform.localPosition = new Vector3(0.180f, 0.95f, -0.983f); // 부모 기준 위치
-                    //    objectSpawned[3] = true;
-                    //}
-                    //if (objectSpawned[3] && Vector3.Distance(cylinders[3].transform.localPosition, new Vector3(-0.3f, 0, 0)) < 0.001f)
-                    //{
-                    //    objectSpawned[3] = false; // 오브젝트 재생성 가능
-                    //}
-
-
-                    //if (coils[560])
-                    //{
-                    //    objectSpawned = false; // 오브젝트 재생성 가능
-                    //    cylinder1_OFF = false; // 초기화해서 재생성 방지
-                    //}
-                    // 추후에 오브젝트 스폰 및 병합 삭제 로직 추가 필요
+                    //Debug.Log($"IsSpawned : {String.Join(", ", objectSpawned)}");
                 }
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"Exception: {e.Message}\n{e.StackTrace}");
+                catch (Exception e)
+                {
+                    Debug.LogError($"Exception: {e.Message}\n{e.StackTrace}");
+                    DisConnect();
+                    if (!isConnecting)
+                        Task.Run(() => Connect());
+                }
             }
             yield return new WaitForSeconds(0.001f);
         }
@@ -323,27 +304,36 @@ public class DT : MonoBehaviour
 
     private async void Connect()
     {
-        try
+        isConnecting = true;
+        while (!isConnected)
         {
-            client = new TcpClient();
-            await client.ConnectAsync("10.10.24.179", 1502);
+            try
+            {
+                client = new TcpClient();
+                await client.ConnectAsync("10.10.24.179", 1502);
 
-            isConnected = client.Connected;
-            if (isConnected)
-            {
-                ModbusFactory factory = new ModbusFactory();
-                modbusMaster = factory.CreateMaster(client);
-                Debug.Log("Connected to Modbus TCP server.");
+                client.ReceiveTimeout = 2000;
+                client.SendTimeout = 2000;
+
+                isConnected = client.Connected;
+                if (isConnected)
+                {
+                    ModbusFactory factory = new ModbusFactory();
+                    modbusMaster = factory.CreateMaster(client);
+                    Debug.Log("Connected to Modbus TCP server.");
+                }
+                else
+                {
+                    Debug.LogWarning("Failed to connect to Modbus TCP server.");
+                }
             }
-            else
+            catch (Exception e)
             {
-                Debug.LogWarning("Failed to connect to Modbus TCP server.");
+                Debug.LogError($"Exception during connection: {e.Message}\n{e.StackTrace}");
             }
+            await Task.Delay(1000); // 매 초 마다 재시도
         }
-        catch (Exception e)
-        {
-            Debug.LogError($"Exception during connection: {e.Message}\n{e.StackTrace}");
-        }
+        isConnecting = false;
     }
 
     private void DisConnect()

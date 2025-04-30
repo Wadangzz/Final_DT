@@ -74,7 +74,7 @@ public class ConveyorItem : MonoBehaviour
         {
             if (CompareTag("Pack"))
             {
-                Vector3 worldTargetPos = other.transform.TransformPoint(new Vector3(-8.9f, -88.6f, -48.9f));
+                Vector3 worldTargetPos = other.transform.TransformPoint(new Vector3(-1.5f, -97.2f, -47.4f));
 
                 transform.SetParent(other.transform, true);
                 transform.position = worldTargetPos;
