@@ -46,9 +46,25 @@ public class DT : MonoBehaviour
     private bool isConnected = false;
     private bool isConnecting = false;
     private bool[] objectSpawned = new bool[] { false, false, false, false, false };
-    private Vector3[] onpos = new Vector3[] { new Vector3(1.0f, 0, 0), new Vector3(0.45f, 0, 0), new Vector3(0.45f, 0, 0), new Vector3(0.45f, 0, 0) };
-    private Vector3[] offpos = new Vector3[] { Vector3.zero, new Vector3(-0.3f, 0, 0), new Vector3(-0.3f, 0, 0), new Vector3(-0.3f, 0, 0) };
-    private Vector3[] spawnPosition = new Vector3[] { new Vector3(0.25f, 4.63f, -0.81f), new Vector3(0.180f, 2.59f, -0.983f), new Vector3(0.180f, 1.77f, -0.983f), new Vector3(0.180f, 0.95f, -0.983f), new Vector3(-59.5f, 256.7f, -0.6f) };
+    private Vector3[] onpos = new Vector3[] {
+                                                new Vector3(1.0f, 0, 0), 
+                                                new Vector3(0.45f, 0, 0), 
+                                                new Vector3(0.45f, 0, 0), 
+                                                new Vector3(0.45f, 0, 0) 
+                                            };
+    private Vector3[] offpos = new Vector3[] { 
+                                                Vector3.zero, 
+                                                new Vector3(-0.3f, 0, 0), 
+                                                new Vector3(-0.3f, 0, 0), 
+                                                new Vector3(-0.3f, 0, 0) 
+                                            };
+    private Vector3[] spawnPosition = new Vector3[] { 
+                                                        new Vector3(0.25f, 4.63f, -0.81f), 
+                                                        new Vector3(0.180f, 2.59f, -0.983f), 
+                                                        new Vector3(0.180f, 1.77f, -0.983f),
+                                                        new Vector3(0.180f, 0.95f, -0.983f), 
+                                                        new Vector3(-59.5f, 256.7f, -0.6f) 
+                                                    };
     private bool[] coils = new bool[1024];
     private ushort[] registers = new ushort[125];
 
@@ -57,7 +73,6 @@ public class DT : MonoBehaviour
     {
         Debug.Log("Start");
         Task.Run(() => Connect());
-        //StartCoroutine(RunDT());
         StartCoroutine(ReadInputRegisters());
         StartCoroutine(ReadInputs());
     }
@@ -108,6 +123,7 @@ public class DT : MonoBehaviour
             cylinders[index].transform.localPosition = Vector3.MoveTowards(cylinders[index].transform.localPosition, offPos, 2 * moveSpeed * Time.deltaTime);
     }
 
+    
     private void MoveSingle(GameObject obj, Vector3 onPos, Vector3 offPos, bool condition, float speedMultiplier = 1f)
     {
         Vector3 target = condition ? onPos : offPos;
@@ -160,6 +176,7 @@ public class DT : MonoBehaviour
         MoveConveyor2(conveyors[2], coils[351]);
     }
 
+    // 메서드 진짜 거지같이 만들었다.......매개변수 7개 실화냐........
     private void ObjectSpawn(ref bool isSpawned, Transform parent, GameObject cylinder, GameObject obj, Vector3 onpos, Vector3 offpos, Vector3 spawnPosition)
     {
         if (coils[504])
@@ -197,31 +214,6 @@ public class DT : MonoBehaviour
             }
         }
     }
-    //IEnumerator RunDT()
-    //{
-    //    while (true)
-    //    {
-    //        if (modbusMaster != null || isConnected)
-    //        {
-    //            StartCoroutine(ReadInputRegisters());
-    //            StartCoroutine(ReadInputs());
-    //            yield return null;
-    //        }
-            
-    //        else if (modbusMaster == null || !isConnected)
-    //        {
-    //            if (isConnecting)
-    //            {
-    //                continue;
-    //            }
-    //            else
-    //            {
-    //                Task.Run(() => Connect());
-    //                yield return new WaitForSeconds(1.0f); ;
-    //            }
-    //        }
-    //    }
-    //}
 
     IEnumerator ReadInputRegisters()
     {

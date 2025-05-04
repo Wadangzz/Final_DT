@@ -79,20 +79,15 @@ public class ConveyorItem : MonoBehaviour
                 transform.SetParent(other.transform, true);
                 transform.position = worldTargetPos;
             }
-
-            //if (CompareTag("Cap"))
-            //{
-            //    // 부모가 아직도 Pack이면 => 따로 이동시키지 말기
-            //    if (transform.parent != null && transform.parent.CompareTag("Pack"))
-            //    {
-            //        // Cap은 Pack에 붙어있는 상태니까 무시
-            //        return;
-            //    }
-            //}
         }
 
         if (other.CompareTag("Belt"))
         {
+            if (transform.parent != null && transform.parent.CompareTag("Picker2"))
+                return;
+            if (transform.parent != null && transform.parent.CompareTag("Pack"))
+                return;
+
             transform.SetParent(other.transform, true);
         }
 
