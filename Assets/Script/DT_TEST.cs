@@ -34,7 +34,7 @@ public class DT : MonoBehaviour
     [SerializeField] private Transform[] conveyors = new Transform[3];
 
     [SerializeField] private float moveSpeed = 3.0f;
-    [SerializeField] private float conveyorSpeed = 1.0f;
+    [SerializeField] private float conveyorSpeed;
 
 
     private float[][] joints = new float[3][] { new float[4], new float[4], new float[4] };
