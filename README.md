@@ -23,8 +23,8 @@
 
 ### 🎯 3. 충돌 기반 이벤트 트리거
 - 특정 위치에서 충돌(`Collider Trigger`) 발생 시:
-  - Cell, Case, Cap 등 관련 **Object 자동 삭제**
   - 특정 위치에 **새로운 Object 생성**
+  - 흡착, 그리퍼 **Pick&Place 구현**
 
 ---
 
