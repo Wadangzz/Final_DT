@@ -1,5 +1,6 @@
-
 # 🎮 Final_DT
+![image](https://github.com/user-attachments/assets/07918e17-1427-4638-93a5-cf57322e74ec)
+
 
 ## 📘 프로젝트 개요
 
