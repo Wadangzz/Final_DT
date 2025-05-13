@@ -9,9 +9,11 @@ using System.Threading.Tasks;
 
 public class DT : MonoBehaviour
 {
+    // Modbus TCP Client
     private TcpClient client;
     private IModbusMaster modbusMaster;
 
+    // UI Elements
     [Header("Cylinders")]
     [SerializeField] private GameObject[] cylinders = new GameObject[6];
     [SerializeField] private GameObject gripper;
@@ -36,7 +38,7 @@ public class DT : MonoBehaviour
     [SerializeField] private float moveSpeed = 3.0f;
     [SerializeField] private float conveyorSpeed;
 
-
+    // 로봇 joint 각도, 서보 위치, 실린더 상태
     private float[][] joints = new float[3][] { new float[4], new float[4], new float[4] };
     private float servoPosition = 0f;
 
@@ -46,6 +48,8 @@ public class DT : MonoBehaviour
     private bool isConnected = false;
     private bool isConnecting = false;
     private bool[] objectSpawned = new bool[] { false, false, false, false, false };
+
+    // 양측 솔레노이드 실린더 (sylinders[0] ~ [3]) Road의 ON/OFF 위치
     private Vector3[] onpos = new Vector3[] {
                                                 new Vector3(1.0f, 0, 0), 
                                                 new Vector3(0.45f, 0, 0), 
@@ -58,6 +62,8 @@ public class DT : MonoBehaviour
                                                 new Vector3(-0.3f, 0, 0), 
                                                 new Vector3(-0.3f, 0, 0) 
                                             };
+
+    // Cell, Pack, Cap의 spawn 위치
     private Vector3[] spawnPosition = new Vector3[] { 
                                                         new Vector3(0.25f, 4.63f, -0.81f), 
                                                         new Vector3(0.180f, 2.59f, -0.983f), 
@@ -65,6 +71,7 @@ public class DT : MonoBehaviour
                                                         new Vector3(0.180f, 0.95f, -0.983f), 
                                                         new Vector3(-59.5f, 256.7f, -0.6f) 
                                                     };
+    // Slave에서 읽어온 coil, register 데이터
     private bool[] coils = new bool[1024];
     private ushort[] registers = new ushort[125];
 
@@ -72,11 +79,13 @@ public class DT : MonoBehaviour
     void Start()
     {
         Debug.Log("Start");
+        // Modbus 연결 및 데이터 읽기 Coroutine 시작
         Task.Run(() => Connect());
         StartCoroutine(ReadInputRegisters());
         StartCoroutine(ReadInputs());
     }
 
+    // ushort를 float로 변환
     float RegistersToFloat(ushort low, ushort high)
     {
         byte[] bytes = new byte[4];
@@ -85,11 +94,14 @@ public class DT : MonoBehaviour
         return BitConverter.ToSingle(bytes, 0);
     }
 
+    // ushort를 int로 변환
     int RegistersToInt32(ushort low, ushort high)
     {
         uint raw = ((uint)high << 16) | low;
         return unchecked((int)raw);
     }
+
+    // 로봇의 joint 각도를 적용
     private void ApplyRobotRotation(GameObject[] robot, float[] joint)
     {
         robot[0].transform.localRotation = Quaternion.Euler(0, -joint[0], 0);
@@ -98,7 +110,7 @@ public class DT : MonoBehaviour
         robot[3].transform.rotation = Quaternion.Euler(0, robot[3].transform.rotation.eulerAngles.y, 0);
     }
 
-
+    // 양측 솔레노이드 실린더의 상태를 업데이트
     private void UpdateDoubleStates()
     {
         for (int i = 0; i < 4; i++)
@@ -115,6 +127,8 @@ public class DT : MonoBehaviour
             }
         }
     }
+
+    // 양측 솔레노이드 실린더 Road 위치를 이동
     private void MoveDouble(int index, Vector3 onPos, Vector3 offPos)
     {
         if (cylinderON[index] && !cylinderOFF[index])
@@ -123,13 +137,14 @@ public class DT : MonoBehaviour
             cylinders[index].transform.localPosition = Vector3.MoveTowards(cylinders[index].transform.localPosition, offPos, 2 * moveSpeed * Time.deltaTime);
     }
 
-    
+    // 편측 솔레노이드 실린더 Road 위치를 이동
     private void MoveSingle(GameObject obj, Vector3 onPos, Vector3 offPos, bool condition, float speedMultiplier = 1f)
     {
         Vector3 target = condition ? onPos : offPos;
         obj.transform.localPosition = Vector3.MoveTowards(obj.transform.localPosition, target, moveSpeed * speedMultiplier * Time.deltaTime);
     }
 
+    // 컨베이어의 아이템을 이동
     private void MoveConveyor(Transform conveyor, bool condition)
     {
         if (condition)
@@ -158,28 +173,31 @@ public class DT : MonoBehaviour
         }
     }
 
+    // Object의 움직임을 적용
     private void ApplyActuatorMotions()
     {
-        // 양측 실린더
+        // 양측 솔레노이드 실린더
         MoveDouble(0, new Vector3(1.0f, 0, 0), Vector3.zero);
         MoveDouble(1, new Vector3(0.45f, 0, 0), new Vector3(-0.3f, 0, 0));
         MoveDouble(2, new Vector3(0.45f, 0, 0), new Vector3(-0.3f, 0, 0));
         MoveDouble(3, new Vector3(0.45f, 0, 0), new Vector3(-0.3f, 0, 0));
 
-        // 편측 실린더
+        // 편측 솔레노이드 실린더
         MoveSingle(cylinders[4], new Vector3(0, 0, -0.55f), Vector3.zero, coils[348]);
         MoveSingle(cylinders[5], new Vector3(0, 0, -0.55f), Vector3.zero, coils[352]);
         MoveSingle(gripper, new Vector3(-18.5f, 0, 0), Vector3.zero, coils[353], 10f);
 
+        // 컨베이어 아이템 이동
         MoveConveyor(conveyors[0], coils[349]);
         MoveConveyor(conveyors[1], coils[350]);
         MoveConveyor2(conveyors[2], coils[351]);
     }
 
+    // Cell, Pack의 생성
     // 메서드 진짜 거지같이 만들었다.......매개변수 7개 실화냐........
     private void ObjectSpawn(ref bool isSpawned, Transform parent, GameObject cylinder, GameObject obj, Vector3 onpos, Vector3 offpos, Vector3 spawnPosition)
     {
-        if (coils[504])
+        if (coils[504]) // 자동운전 모드
         {
             if (!isSpawned && Vector3.Distance(cylinder.transform.localPosition, onpos) < 0.001f)
             {
@@ -196,9 +214,10 @@ public class DT : MonoBehaviour
         }
     }
 
+    // Cap의 생성
     private void ObjectSpawn2(ref bool isSpawned, Transform parent, GameObject obj, Vector3 spawnPosition)
     {
-        if (coils[504])
+        if (coils[504]) // 자동운전 모드
         {
             if (!isSpawned && coils[121] && registers[80] == 0)
             {
@@ -215,6 +234,7 @@ public class DT : MonoBehaviour
         }
     }
 
+    // Register 데이터를 읽어오는 코루틴
     IEnumerator ReadInputRegisters()
     {
         while (true)
@@ -226,6 +246,7 @@ public class DT : MonoBehaviour
             }
             else if (modbusMaster != null)
             {
+                // 읽어온 register 데이터로 로봇 joint 각도 및 서보 위치 업데이트
                 try
                 {
                     registers = modbusMaster.ReadInputRegisters(1, 0, 125);
@@ -256,6 +277,7 @@ public class DT : MonoBehaviour
         } 
     }
 
+    // Input 데이터를 읽어오는 코루틴
     IEnumerator ReadInputs()
     {
         while (true)
@@ -267,6 +289,7 @@ public class DT : MonoBehaviour
             }
             else if (modbusMaster != null)
             {
+                // 읽어온 coil 데이터로 컨베이어 및 실린더 상태 업데이트
                 try
                 {
                     coils = modbusMaster.ReadInputs(1, 0, 1024);
@@ -294,6 +317,7 @@ public class DT : MonoBehaviour
         }
     }
 
+    // Modbus TCP 서버에 연결
     private async void Connect()
     {
         isConnecting = true;
@@ -302,7 +326,7 @@ public class DT : MonoBehaviour
             try
             {
                 client = new TcpClient();
-                await client.ConnectAsync("10.10.24.179", 1502);
+                await client.ConnectAsync("10.10.24.179", 1502); // Cimon SCADA도 502번 포트 사용해서 1502로 바꿈
 
                 client.ReceiveTimeout = 2000;
                 client.SendTimeout = 2000;
@@ -328,6 +352,7 @@ public class DT : MonoBehaviour
         isConnecting = false;
     }
 
+    // 연결 해제
     private void DisConnect()
     {
         modbusMaster?.Dispose();
@@ -339,6 +364,7 @@ public class DT : MonoBehaviour
         Array.Clear(registers, 0, registers.Length);
     }
 
+    // End Effector 지면과 수평 유지하도록 고정(실제 로봇 자유도 반영)
     void LateUpdate()
     {
         Vector3 forward = transform.forward;
