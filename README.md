@@ -35,7 +35,7 @@
 | `DT_TEST.cs` | Modbus TCP 연동 및 전체 오브젝트 제어 로직 담당 |
 | `ConveyorItem.cs` | 이동 대상 오브젝트의 충돌, 삭제 조건 처리 |
 | `ObjectReset.cs` | 특정 위치에서 셀, 캡 등 오브젝트 자동 제거 |
-| `CameraControl.cs` | 조건에 따른 카메라 시점 자동 전환 |
+| `CameraControl.cs` | 조건에 따른 카메라 시점 전환 |
 | `NModbus.dll` | Unity C#에서 Modbus TCP 통신을 위한 .NET 라이브러리 |
 | FBX Assets | Conveyor, Robot, Cap 등 실제 라인 구성 요소의 3D 모델 |
 
